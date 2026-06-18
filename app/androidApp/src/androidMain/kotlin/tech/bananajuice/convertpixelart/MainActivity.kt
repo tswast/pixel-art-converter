@@ -154,6 +154,13 @@ class MainActivity : ComponentActivity() {
             var zipEntry = zis.nextEntry
             while (zipEntry != null) {
                 val newFile = File(targetDir, zipEntry.name)
+                // Zip Slip vulnerability prevention
+                val targetDirPath = targetDir.canonicalPath
+                val newFilePath = newFile.canonicalPath
+                if (!newFilePath.startsWith(targetDirPath + File.separator)) {
+                    throw SecurityException("Entry is outside of the target dir: ${zipEntry.name}")
+                }
+
                 if (zipEntry.isDirectory) {
                     newFile.mkdirs()
                 } else {

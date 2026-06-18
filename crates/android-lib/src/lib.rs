@@ -11,7 +11,7 @@ pub extern "system" fn Java_tech_bananajuice_convertpixelart_RustCore_convertFil
     _class: JClass,
     input_path: JString,
     output_path: JString,
-    timelapse: bool,
+    timelapse: jni::sys::jboolean,
 ) -> jint {
     let input_path_str: String = env.get_string(&input_path).expect("Couldn't get java string!").into();
     let output_path_str: String = env.get_string(&output_path).expect("Couldn't get java string!").into();
@@ -25,7 +25,7 @@ pub extern "system" fn Java_tech_bananajuice_convertpixelart_RustCore_convertFil
     }
 }
 
-fn convert_impl(input_path_str: &str, output_path_str: &str, timelapse: bool) -> Result<()> {
+fn convert_impl(input_path_str: &str, output_path_str: &str, timelapse: jni::sys::jboolean) -> Result<()> {
     let input_path = Path::new(input_path_str);
     let output_path = Path::new(output_path_str);
 
@@ -116,12 +116,12 @@ fn handle_legacy_format(pixaki_path: &Path) -> Result<pixel_art::Document> {
     pixaki_v2_converter::convert(doc_v2, pixaki_path)
 }
 
-fn handle_psp_format(psp_path: &Path, timelapse: bool) -> Result<pixel_art::Document> {
+fn handle_psp_format(psp_path: &Path, timelapse: jni::sys::jboolean) -> Result<pixel_art::Document> {
     let json_str = fs::read_to_string(psp_path)?;
     let doc_psp: pixel_studio_pro_v2::Document =
         serde_json::from_str(&json_str).context("Unable to parse .psp JSON document")?;
 
-    pixel_studio_pro_v2_converter::convert(doc_psp, timelapse)
+    pixel_studio_pro_v2_converter::convert(doc_psp, timelapse != 0)
 }
 
 fn handle_psd_format(psd_path: &Path) -> Result<pixel_art::Document> {
