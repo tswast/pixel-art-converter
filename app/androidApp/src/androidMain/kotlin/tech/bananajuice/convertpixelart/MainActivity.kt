@@ -82,9 +82,10 @@ class MainActivity : ComponentActivity() {
 
                 var inputFile = File(inputCacheDir, fileName)
 
-                contentResolver.openInputStream(uri)?.use { inputStream ->
+                val inputStream = contentResolver.openInputStream(uri) ?: throw java.io.IOException("Failed to open input stream for URI: $uri")
+                inputStream.use { input ->
                     FileOutputStream(inputFile).use { outputStream ->
-                        inputStream.copyTo(outputStream)
+                        input.copyTo(outputStream)
                     }
                 }
 
