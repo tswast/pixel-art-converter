@@ -10,6 +10,7 @@ import android.provider.OpenableColumns
 import androidx.activity.ComponentActivity
 import androidx.activity.compose.setContent
 import androidx.activity.result.contract.ActivityResultContracts
+import androidx.lifecycle.lifecycleScope
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.setValue
@@ -158,7 +159,7 @@ class MainActivity : ComponentActivity() {
                 // Zip Slip vulnerability prevention
                 val targetDirPath = targetDir.canonicalPath
                 val newFilePath = newFile.canonicalPath
-                if (!newFilePath.startsWith(targetDirPath + File.separator)) {
+                if (!newFilePath.startsWith(targetDirPath + File.separator) && newFilePath != targetDirPath) {
                     throw SecurityException("Entry is outside of the target dir: ${zipEntry.name}")
                 }
 
