@@ -74,7 +74,7 @@ class MainActivity : ComponentActivity() {
 
     private fun handleFileUri(uri: Uri) {
         statusText = "Processing file..."
-        CoroutineScope(Dispatchers.IO).launch {
+        lifecycleScope.launch(Dispatchers.IO) {
             try {
                 val fileName = getFileName(uri) ?: "input_file"
                 val inputCacheDir = File(cacheDir, "inputs")
