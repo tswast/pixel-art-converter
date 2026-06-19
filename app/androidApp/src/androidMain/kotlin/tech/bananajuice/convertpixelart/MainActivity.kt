@@ -42,7 +42,7 @@ class MainActivity : ComponentActivity() {
             )
         }
 
-        if (intent?.action == Intent.ACTION_SEND) {
+        if (savedInstanceState == null && intent?.action == Intent.ACTION_SEND) {
             intent.clipData?.let { clipData ->
                 if (clipData.itemCount > 0) {
                     val uri = clipData.getItemAt(0).uri
