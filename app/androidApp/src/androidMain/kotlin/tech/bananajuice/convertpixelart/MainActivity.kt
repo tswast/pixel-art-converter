@@ -159,7 +159,7 @@ class MainActivity : ComponentActivity() {
                 // Zip Slip vulnerability prevention
                 val targetDirPath = targetDir.canonicalPath
                 val newFilePath = newFile.canonicalPath
-                if (!newFilePath.startsWith(targetDirPath + File.separator) && newFilePath != targetDirPath) {
+                if (!File(newFilePath).startsWith(File(targetDirPath))) {
                     throw SecurityException("Entry is outside of the target dir: ${zipEntry.name}")
                 }
 
