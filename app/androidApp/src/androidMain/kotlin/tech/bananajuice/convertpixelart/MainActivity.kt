@@ -1,6 +1,7 @@
 package tech.bananajuice.convertpixelart
 
 import App
+import OutputFormat
 import android.app.Activity
 import android.content.Intent
 import android.net.Uri
@@ -25,11 +26,13 @@ import java.util.zip.ZipInputStream
 
 class MainActivity : ComponentActivity() {
     private var statusText by mutableStateOf("")
+    private var pendingUri by mutableStateOf<Uri?>(null)
 
     private val selectFileLauncher = registerForActivityResult(ActivityResultContracts.StartActivityForResult()) { result ->
         if (result.resultCode == Activity.RESULT_OK) {
             result.data?.data?.let { uri ->
-                handleFileUri(uri)
+                pendingUri = uri
+                statusText = "Please select output format"
             }
         }
     }
@@ -39,7 +42,15 @@ class MainActivity : ComponentActivity() {
         setContent {
             App(
                 onSelectFileClick = { openFilePicker() },
-                statusText = statusText
+                statusText = statusText,
+                hasPendingFile = pendingUri != null,
+                onFormatSelected = { format ->
+                    pendingUri?.let { uri ->
+                        val uriToProcess = uri
+                        pendingUri = null
+                        handleFileUri(uriToProcess, format)
+                    }
+                }
             )
         }
 
@@ -48,7 +59,8 @@ class MainActivity : ComponentActivity() {
                 if (clipData.itemCount > 0) {
                     val uri = clipData.getItemAt(0).uri
                     if (uri != null) {
-                        handleFileUri(uri)
+                        pendingUri = uri
+                        statusText = "Please select output format"
                     }
                 }
             } ?: run {
@@ -59,7 +71,8 @@ class MainActivity : ComponentActivity() {
                     intent.getParcelableExtra<Uri>(Intent.EXTRA_STREAM)
                 }
                 if (uri != null) {
-                    handleFileUri(uri)
+                    pendingUri = uri
+                    statusText = "Please select output format"
                 }
             }
         }
@@ -73,7 +86,7 @@ class MainActivity : ComponentActivity() {
         selectFileLauncher.launch(intent)
     }
 
-    private fun handleFileUri(uri: Uri) {
+    private fun handleFileUri(uri: Uri, outputFormat: OutputFormat) {
         statusText = "Processing file..."
         lifecycleScope.launch(Dispatchers.IO) {
             try {
@@ -99,21 +112,16 @@ class MainActivity : ComponentActivity() {
                 val outputDir = File(cacheDir, "outputs")
                 outputDir.mkdirs()
 
-                val outputExtension = if (inputFile.name.endsWith(".psp", ignoreCase = true) ||
-                                          inputFile.name.endsWith(".psd", ignoreCase = true) ||
-                                          inputFile.name.endsWith(".ase", ignoreCase = true) ||
-                                          inputFile.name.endsWith(".aseprite", ignoreCase = true) ||
-                                          inputFile.name.endsWith(".pixaki", ignoreCase = true) ||
-                                          inputFile.isDirectory) {
-                    ".aseprite"
-                } else {
-                    ".png"
+                val outputExtension = when (outputFormat) {
+                    OutputFormat.PNG -> ".png"
+                    OutputFormat.ASEPRITE, OutputFormat.ASEPRITE_TIMELAPSE -> ".aseprite"
                 }
 
                 val outputFileName = "${if (inputFile.isDirectory) inputFile.name else inputFile.nameWithoutExtension}$outputExtension"
                 val outputFile = File(outputDir, outputFileName)
 
-                val result = RustCore.convertFile(inputFile.absolutePath, outputFile.absolutePath, false)
+                val isTimelapse = outputFormat == OutputFormat.ASEPRITE_TIMELAPSE
+                val result = RustCore.convertFile(inputFile.absolutePath, outputFile.absolutePath, isTimelapse)
 
                 withContext(Dispatchers.Main) {
                     if (result == 0) {
