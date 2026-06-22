@@ -28,6 +28,29 @@ class MainActivity : ComponentActivity() {
     private var statusText by mutableStateOf("")
     private var pendingUri by mutableStateOf<Uri?>(null)
 
+    override fun onSaveInstanceState(outState: Bundle) {
+        super.onSaveInstanceState(outState)
+        pendingUri?.let { outState.putParcelable("pendingUri", it) }
+        outState.putString("statusText", statusText)
+    }
+
+    override fun onRestoreInstanceState(savedInstanceState: Bundle) {
+        super.onRestoreInstanceState(savedInstanceState)
+        val savedUri = if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.TIRAMISU) {
+            savedInstanceState.getParcelable("pendingUri", Uri::class.java)
+        } else {
+            @Suppress("DEPRECATION")
+            savedInstanceState.getParcelable<Uri>("pendingUri")
+        }
+        if (savedUri != null) {
+            pendingUri = savedUri
+        }
+        val savedStatus = savedInstanceState.getString("statusText")
+        if (savedStatus != null) {
+            statusText = savedStatus
+        }
+    }
+
     private val selectFileLauncher = registerForActivityResult(ActivityResultContracts.StartActivityForResult()) { result ->
         if (result.resultCode == Activity.RESULT_OK) {
             result.data?.data?.let { uri ->
@@ -46,9 +69,12 @@ class MainActivity : ComponentActivity() {
                 hasPendingFile = pendingUri != null,
                 onFormatSelected = { format ->
                     pendingUri?.let { uri ->
-                        val uriToProcess = uri
                         pendingUri = null
-                        handleFileUri(uriToProcess, format)
+                        if (format != null) {
+                            handleFileUri(uri, format)
+                        } else {
+                            statusText = ""
+                        }
                     }
                 }
             )
