@@ -7,3 +7,4 @@ Cargo.lock
 
 # Logs
 *.log
+crates/android-lib/target/

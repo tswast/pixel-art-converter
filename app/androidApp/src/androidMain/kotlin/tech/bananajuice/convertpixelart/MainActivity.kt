@@ -1,6 +1,7 @@
 package tech.bananajuice.convertpixelart
 
 import App
+import OutputFormat
 import android.app.Activity
 import android.content.Intent
 import android.net.Uri
@@ -25,11 +26,36 @@ import java.util.zip.ZipInputStream
 
 class MainActivity : ComponentActivity() {
     private var statusText by mutableStateOf("")
+    private var pendingUri by mutableStateOf<Uri?>(null)
+
+    override fun onSaveInstanceState(outState: Bundle) {
+        super.onSaveInstanceState(outState)
+        pendingUri?.let { outState.putParcelable("pendingUri", it) }
+        outState.putString("statusText", statusText)
+    }
+
+    override fun onRestoreInstanceState(savedInstanceState: Bundle) {
+        super.onRestoreInstanceState(savedInstanceState)
+        val savedUri = if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.TIRAMISU) {
+            savedInstanceState.getParcelable("pendingUri", Uri::class.java)
+        } else {
+            @Suppress("DEPRECATION")
+            savedInstanceState.getParcelable<Uri>("pendingUri")
+        }
+        if (savedUri != null) {
+            pendingUri = savedUri
+        }
+        val savedStatus = savedInstanceState.getString("statusText")
+        if (savedStatus != null) {
+            statusText = savedStatus
+        }
+    }
 
     private val selectFileLauncher = registerForActivityResult(ActivityResultContracts.StartActivityForResult()) { result ->
         if (result.resultCode == Activity.RESULT_OK) {
             result.data?.data?.let { uri ->
-                handleFileUri(uri)
+                pendingUri = uri
+                statusText = "Please select output format"
             }
         }
     }
@@ -39,7 +65,18 @@ class MainActivity : ComponentActivity() {
         setContent {
             App(
                 onSelectFileClick = { openFilePicker() },
-                statusText = statusText
+                statusText = statusText,
+                hasPendingFile = pendingUri != null,
+                onFormatSelected = { format ->
+                    pendingUri?.let { uri ->
+                        pendingUri = null
+                        if (format != null) {
+                            handleFileUri(uri, format)
+                        } else {
+                            statusText = ""
+                        }
+                    }
+                }
             )
         }
 
@@ -48,7 +85,8 @@ class MainActivity : ComponentActivity() {
                 if (clipData.itemCount > 0) {
                     val uri = clipData.getItemAt(0).uri
                     if (uri != null) {
-                        handleFileUri(uri)
+                        pendingUri = uri
+                        statusText = "Please select output format"
                     }
                 }
             } ?: run {
@@ -59,7 +97,8 @@ class MainActivity : ComponentActivity() {
                     intent.getParcelableExtra<Uri>(Intent.EXTRA_STREAM)
                 }
                 if (uri != null) {
-                    handleFileUri(uri)
+                    pendingUri = uri
+                    statusText = "Please select output format"
                 }
             }
         }
@@ -73,7 +112,7 @@ class MainActivity : ComponentActivity() {
         selectFileLauncher.launch(intent)
     }
 
-    private fun handleFileUri(uri: Uri) {
+    private fun handleFileUri(uri: Uri, outputFormat: OutputFormat) {
         statusText = "Processing file..."
         lifecycleScope.launch(Dispatchers.IO) {
             try {
@@ -99,21 +138,16 @@ class MainActivity : ComponentActivity() {
                 val outputDir = File(cacheDir, "outputs")
                 outputDir.mkdirs()
 
-                val outputExtension = if (inputFile.name.endsWith(".psp", ignoreCase = true) ||
-                                          inputFile.name.endsWith(".psd", ignoreCase = true) ||
-                                          inputFile.name.endsWith(".ase", ignoreCase = true) ||
-                                          inputFile.name.endsWith(".aseprite", ignoreCase = true) ||
-                                          inputFile.name.endsWith(".pixaki", ignoreCase = true) ||
-                                          inputFile.isDirectory) {
-                    ".aseprite"
-                } else {
-                    ".png"
+                val outputExtension = when (outputFormat) {
+                    OutputFormat.PNG -> ".png"
+                    OutputFormat.ASEPRITE, OutputFormat.ASEPRITE_TIMELAPSE -> ".aseprite"
                 }
 
                 val outputFileName = "${if (inputFile.isDirectory) inputFile.name else inputFile.nameWithoutExtension}$outputExtension"
                 val outputFile = File(outputDir, outputFileName)
 
-                val result = RustCore.convertFile(inputFile.absolutePath, outputFile.absolutePath, false)
+                val isTimelapse = outputFormat == OutputFormat.ASEPRITE_TIMELAPSE
+                val result = RustCore.convertFile(inputFile.absolutePath, outputFile.absolutePath, isTimelapse)
 
                 withContext(Dispatchers.Main) {
                     if (result == 0) {
