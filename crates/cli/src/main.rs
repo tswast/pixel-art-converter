@@ -95,9 +95,47 @@ fn main() -> Result<()> {
                 "PNG export requires the 'image' or 'tiny-skia' feature to be enabled"
             ));
         }
+    } else if ext == "gif" {
+        #[cfg(feature = "image")]
+        {
+            use image::codecs::gif::{GifEncoder, Repeat};
+            use image::{Delay, Frame};
+            use std::fs::File;
+
+            let file = File::create(&cli.output_path).context("Failed to create GIF file")?;
+            let mut encoder = GifEncoder::new(file);
+            encoder
+                .set_repeat(Repeat::Infinite)
+                .context("Failed to set repeat")?;
+
+            if doc.frames.is_empty() {
+                let img = doc.render();
+                let frame = Frame::new(img);
+                encoder
+                    .encode_frame(frame)
+                    .context("Failed to encode GIF frame")?;
+            } else {
+                for (i, doc_frame) in doc.frames.iter().enumerate() {
+                    let img = doc.render_frame(i);
+                    let duration = std::time::Duration::from_millis(doc_frame.duration_ms as u64);
+                    let delay = Delay::from_saturating_duration(duration);
+                    let frame = Frame::from_parts(img, 0, 0, delay);
+                    encoder
+                        .encode_frame(frame)
+                        .context("Failed to encode GIF frame")?;
+                }
+            }
+            println!("Successfully wrote GIF file to {:?}", cli.output_path);
+        }
+        #[cfg(not(feature = "image"))]
+        {
+            return Err(anyhow!(
+                "GIF export requires the 'image' feature to be enabled"
+            ));
+        }
     } else {
         return Err(anyhow!(
-            "Unsupported output format: '{}'. Supported formats are .ase, .aseprite, and .png",
+            "Unsupported output format: '{}'. Supported formats are .ase, .aseprite, .png, and .gif",
             ext
         ));
     }

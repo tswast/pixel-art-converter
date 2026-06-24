@@ -89,9 +89,37 @@ fn convert_impl(input_path_str: &str, output_path_str: &str, timelapse: jni::sys
         let img = doc.render();
         img.save(&output_path)
             .context("Failed to write PNG file")?;
+    } else if ext == "gif" {
+        use std::fs::File;
+        use image::codecs::gif::{GifEncoder, Repeat};
+        use image::{Delay, Frame};
+
+        let file = File::create(&output_path).context("Failed to create GIF file")?;
+        let mut encoder = GifEncoder::new(file);
+        encoder
+            .set_repeat(Repeat::Infinite)
+            .context("Failed to set repeat")?;
+
+        if doc.frames.is_empty() {
+            let img = doc.render();
+            let frame = Frame::new(img);
+            encoder
+                .encode_frame(frame)
+                .context("Failed to encode GIF frame")?;
+        } else {
+            for (i, doc_frame) in doc.frames.iter().enumerate() {
+                let img = doc.render_frame(i);
+                let duration = std::time::Duration::from_millis(doc_frame.duration_ms as u64);
+                let delay = Delay::from_saturating_duration(duration);
+                let frame = Frame::from_parts(img, 0, 0, delay);
+                encoder
+                    .encode_frame(frame)
+                    .context("Failed to encode GIF frame")?;
+            }
+        }
     } else {
         return Err(anyhow!(
-            "Unsupported output format: '{}'. Supported formats are .ase, .aseprite, and .png",
+            "Unsupported output format: '{}'. Supported formats are .ase, .aseprite, .png, and .gif",
             ext
         ));
     }
