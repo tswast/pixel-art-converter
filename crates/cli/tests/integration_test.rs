@@ -336,6 +336,56 @@ fn test_cli_aseprite_to_png() {
 
 #[cfg(feature = "image")]
 #[test]
+fn test_cli_aseprite_to_gif() {
+    let pixaki_path = PathBuf::from("tests/data/fox_smile.pixaki");
+    let aseprite_path = PathBuf::from("tests/data/fox_smile_temp_gif.aseprite");
+    let gif_path = PathBuf::from("tests/data/fox_smile_from_aseprite.gif");
+
+    // Ensure outputs don't exist
+    if aseprite_path.exists() {
+        fs::remove_file(&aseprite_path).unwrap();
+    }
+    if gif_path.exists() {
+        fs::remove_file(&gif_path).unwrap();
+    }
+
+    // Generate intermediate aseprite
+    let status_ase = Command::new("cargo")
+        .args([
+            "run",
+            "--",
+            pixaki_path.to_str().unwrap(),
+            aseprite_path.to_str().unwrap(),
+        ])
+        .status()
+        .expect("Failed to execute command");
+
+    assert!(status_ase.success());
+    assert!(aseprite_path.exists());
+
+    // Generate gif from aseprite
+    let status_gif = Command::new("cargo")
+        .args([
+            "run",
+            "--features",
+            "image",
+            "--",
+            aseprite_path.to_str().unwrap(),
+            gif_path.to_str().unwrap(),
+        ])
+        .status()
+        .expect("Failed to execute command");
+
+    assert!(status_gif.success());
+    assert!(gif_path.exists());
+
+    // Optional: Clean up
+    fs::remove_file(&aseprite_path).unwrap();
+    fs::remove_file(&gif_path).unwrap();
+}
+
+#[cfg(feature = "image")]
+#[test]
 fn test_layers_consistency() {
     let data_dir = PathBuf::from("tests/data/layers");
     let reference_png = data_dir.join("layers.png");

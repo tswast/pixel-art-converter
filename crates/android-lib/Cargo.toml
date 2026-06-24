@@ -21,3 +21,4 @@ aseprite-io = "0.1"
 aseprite-converter = { path = "../aseprite-converter" }
 serde_json = "1.0"
 plist = "1.6"
+image = "0.25.10"

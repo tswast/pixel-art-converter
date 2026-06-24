@@ -11,13 +11,17 @@ pub struct Document {
 #[cfg(feature = "image")]
 impl Document {
     pub fn render(&self) -> image::RgbaImage {
+        self.render_frame(0)
+    }
+
+    pub fn render_frame(&self, frame_index: usize) -> image::RgbaImage {
         let mut base = image::RgbaImage::new(self.width as u32, self.height as u32);
         if self.frames.is_empty() {
             return base;
         }
 
-        // Collect all cels for frame 0
-        let mut frame_cels: Vec<&Cel> = self.cels.iter().filter(|c| c.frame_index == 0).collect();
+        // Collect all cels for the specified frame
+        let mut frame_cels: Vec<&Cel> = self.cels.iter().filter(|c| c.frame_index == frame_index).collect();
 
         // Sort cels by layer index ascending (assuming index 0 is the bottom layer, so we render from back to front)
         frame_cels.sort_by_key(|c| c.layer_index);
@@ -56,6 +60,10 @@ impl Document {
 #[cfg(feature = "tiny-skia")]
 impl Document {
     pub fn render_skia(&self) -> tiny_skia::Pixmap {
+        self.render_frame_skia(0)
+    }
+
+    pub fn render_frame_skia(&self, frame_index: usize) -> tiny_skia::Pixmap {
         let mut base = tiny_skia::Pixmap::new(self.width as u32, self.height as u32)
             .expect("Failed to create base Pixmap");
 
@@ -63,7 +71,7 @@ impl Document {
             return base;
         }
 
-        let mut frame_cels: Vec<&Cel> = self.cels.iter().filter(|c| c.frame_index == 0).collect();
+        let mut frame_cels: Vec<&Cel> = self.cels.iter().filter(|c| c.frame_index == frame_index).collect();
 
         // Sort cels by layer index ascending (assuming index 0 is the bottom layer)
         frame_cels.sort_by_key(|c| c.layer_index);
