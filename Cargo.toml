@@ -3,3 +3,24 @@ members = [
     "crates/*",
 ]
 resolver = "2"
+
+[workspace.package]
+authors = ["Banana Juice LLC"]
+edition = "2024"
+repository = "https://github.com/banajuicellc/pixel-art-converter/"
+license = "Apache-2.0"
+rust-version = "1.90"
+
+[workspace.lints.clippy]
+pedantic = { level = "warn", priority = -1 }
+nursery = { level = "warn", priority = -1 }
+empty_docs = "allow"
+
+[workspace.lints.rust]
+unsafe_code = "forbid"
+
+[workspace.dependencies]
+anyhow = "1.0.104"
+boltffi = "=0.29.3"
+crux_core = "0.20.0"
+serde = "1.0.229"

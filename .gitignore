@@ -1,5 +1,6 @@
 # Rust
 /target
+**/target/
 Cargo.lock
 
 # OS-specific
@@ -7,4 +8,3 @@ Cargo.lock
 
 # Logs
 *.log
-crates/android-lib/target/
